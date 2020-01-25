@@ -1,0 +1,9 @@
+/node_modules/
+/demo/
+/.vscode/
+yarn.lock
+package-lock.json
+yarn-error.log
+/example/
+/lib/
+/mochawesome-report/
