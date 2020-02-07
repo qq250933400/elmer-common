@@ -116,7 +116,7 @@ export class StaticCommon {
                         //
                         tmpData = tmpData[keyStr];
                     }
-                    if(index === keyArr.length - 2) {
+                    if(tmpData && index === keyArr.length - 2) {
                         if(nextKey === "key") {
                             tmpData = tmpData.key;
                             isFind = true;
