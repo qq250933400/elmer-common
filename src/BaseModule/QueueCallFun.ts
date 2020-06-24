@@ -5,6 +5,7 @@ export type TypeQueueCallOption = {
     lastKey: string;
     lastResult: any;
     param: any;
+    result: any;
 };
 export type TypeQueueCallFunction = (option:TypeQueueCallOption, param: any) => {};
 
@@ -12,8 +13,8 @@ export type TypeQueueCallFunction = (option:TypeQueueCallOption, param: any) => 
 export type TypeQueueCallParam = {
     id: string;
     params: any;
-    owner: any;
-    fn: TypeQueueCallFunction;
+    owner?: any;
+    fn?: TypeQueueCallFunction;
 };
 
 const callYieldFunc = function* <T>(callbackObj:{[P in keyof T]:Function}):any {
@@ -39,6 +40,80 @@ const callYieldFunc = function* <T>(callbackObj:{[P in keyof T]:Function}):any {
     }
     return result;
 };
+
+export const queueCallRaceAll = async (paramList: TypeQueueCallParam[], fn?:TypeQueueCallFunction): Promise<any> => {
+    return new Promise((resolve, reject) => {
+        if(paramList && paramList.length > 0) {
+            const allStatus = {};
+            const allResult = {};
+            const checkAllStatus = () => {
+                let hasError = false;
+                // tslint:disable-next-line: forin
+                for(const key in allStatus) {
+                    if(allStatus[key] === "PENDING") {
+                        return;
+                    }
+                    if(allStatus[key] === "ERROR") {
+                        hasError = true;
+                        break;
+                    }
+                }
+                if(hasError) {
+                    reject(allResult);
+                } else {
+                    resolve(allResult);
+                }
+            };
+            paramList.map((item: TypeQueueCallParam, index:number) => {
+                const taskID = "queueCall" + index​​;
+                allStatus["queueCall" + index​​] = "PENDING";
+                ((param:TypeQueueCallParam, taskId: string): void => {
+                    const callback = typeof param.fn === "function" ? param.fn : fn;
+                    if(typeof callback === "function") {
+                        // tslint:disable-next-line: no-inferred-empty-object-type
+                        const callbackResult = callback({
+                            id: param.id,
+                            lastKey: null,
+                            lastResult: null,
+                            param: param.params,
+                            result: allResult
+                        }, param.params);
+                        if(StaticCommon.isPromise(callbackResult)) {
+                            callbackResult.then((resp:any) => {
+                                allResult[param.id] = resp;
+                                allStatus[taskID] = "OK";
+                                checkAllStatus();
+                            }).catch((error) => {
+                                allResult[param.id] = {
+                                    statusCode: "Fail",
+                                    // tslint:disable-next-line: object-literal-sort-keys
+                                    exception: error,
+                                    message: error.message || error.statusText || "Unknow error",
+                                };
+                                allStatus[taskID] = "ERROR";
+                                checkAllStatus();
+                            });
+                        } else {
+                            allResult[param.id] = callbackResult;
+                            allStatus[taskID] = "OK";
+                            checkAllStatus();
+                        }
+                    } else {
+                        allResult[param.id] = {
+                            statusCode: "Fail",
+                            // tslint:disable-next-line: object-literal-sort-keys
+                            message: "the fn callback is not a function"
+                        };
+                        checkAllStatus();
+                    }
+                })(item, taskID);
+            });
+        } else {
+            resolve();
+        }
+    });
+};
+
 /**
  * 按队列调用异步函数或普通函数
  * @param paramList {TypeQueueCallParam[]} 队列参数

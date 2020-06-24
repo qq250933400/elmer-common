@@ -32,6 +32,9 @@ export class StaticCommon {
     static isEmpty(val:any):boolean {
         return val === undefined || val === null || (StaticCommon.isString(val) && val.length <= 0);
     }
+    static isPromise(val:any): val is Promise<any> {
+        return StaticCommon.getType(val) === "[object Promise]";
+    }
     static isGlobalObj(val:any): boolean {
         return this.getType(val) === "[object global]";
     }
@@ -147,59 +150,45 @@ export class StaticCommon {
      * @param fn 自定义设置值回调
      */
     static setValue(data:object, key:string, value:any, fn?: Function): boolean {
-        const keyValue = key !== undefined && key !== null ? key : "";
-        if (/\./.test(keyValue)) {
-            const keyArr = keyValue.split(".");
-            let isFind = false;
+        let isUpdate = false;
+        if(!StaticCommon.isObject(data)) {
+            throw new Error("The parameter of data is not a object");
+        }
+        if(StaticCommon.isEmpty(key)) {
+            throw new Error("The key can not be an empty string");
+        }
+        if(!StaticCommon.isEmpty(value)) {
+            const keyArr = key.split(".");
+            const keyLen = keyArr.length;
             let index = 0;
-            let keyStr = "";
-            let tmpData:any = data;
-            while (index < keyArr.length - 1) {
-                keyStr = keyArr[index];
-                isFind = index === keyArr.length - 2;
-                if(isFind && this.isObject(tmpData[keyStr])) {
-                    tmpData = tmpData[keyStr];
-                    break;
-                } else {
-                    if(!this.isFunction(fn)) {
-                        if(this.isEmpty(tmpData[keyStr])) {
-                            tmpData[keyStr] = {};
-                            tmpData = tmpData[keyStr];
+            let tmpData = data;
+            while(index<keyLen) {
+                const cKey = keyArr[index];
+                if(index < keyLen - 1) {
+                    // 不是最后一个节点
+                    if(!StaticCommon.isEmpty(tmpData[cKey])) {
+                        if(StaticCommon.isObject(tmpData[cKey])) {
+                            tmpData = tmpData[cKey];
                         } else {
-                            // tslint:disable-next-line:no-console
-                            console.error("设置错误节点不能设置内容！");
-                            break;
+                            throw new Error("Can not set value to attribute of " + cKey);
                         }
                     } else {
-                        if(this.isEmpty(tmpData[keyStr])) {
-                            fn(tmpData, keyStr);
-                            tmpData = tmpData[keyStr];
-                        } else {
-                            // tslint:disable-next-line:no-console
-                            console.error("设置错误节点不能设置内容！");
-                            break;
-                        }
+                        tmpData[cKey] = {};
+                        tmpData = tmpData[cKey];
                     }
+                } else {
+                    // 要更新数据的节点
+                    if(typeof fn === "function") {
+                        fn(tmpData, cKey);
+                    } else {
+                        tmpData[cKey] = value;
+                    }
+                    isUpdate = true;
                 }
                 index++;
             }
-            if(isFind && this.isObject(tmpData)) {
-                if(!this.isFunction(fn)) {
-                    tmpData[keyArr[keyArr.length - 1]] = value;
-                } else {
-                    fn(tmpData,keyArr[keyArr.length - 1], value);
-                }
-                return true;
-            }
-        } else {
-            if(!this.isFunction(fn)) {
-                (<any>data)[keyValue] = value;
-            } else {
-                fn((<any>data), keyValue, value);
-            }
-            return true;
         }
-        return false;
+        return isUpdate;
     }
     /**
      * 获取随机ID
@@ -357,8 +346,8 @@ export class StaticCommon {
         };
         return (S4() + S4() + "-" + S4() + "-" + S4() + "-" + S4() + "-" + S4() + S4());
     }
-    static getUri(): any {
-        let str = location.search || "";
+    static getUri(queryString?: string): any {
+        let str = !StaticCommon.isEmpty(queryString) ? queryString : (location.search || "");
         let strArr = [];
         const result = {};
         str = str.replace(/^\?/, "").replace(/\#[\s\S]*$/, "");
@@ -373,8 +362,8 @@ export class StaticCommon {
         }
         return result;
     }
-    static getQuery(key: string): string | undefined | null {
-        return StaticCommon.getUri()[key];
+    static getQuery(key: string, queryString?: string): string | undefined | null {
+        return StaticCommon.getUri(queryString)[key];
     }
 }
 
@@ -385,4 +374,23 @@ export const defineReadonlyProperty = (target:any, propertyKey: string, property
         value: propertyValue,
         writable: false
     });
+};
+
+export const getEnvFromCommand = (commandList:string[]): string => {
+    let env = "Prod";
+    if(commandList && commandList.length>0) {
+        for(let i=0;i<commandList.length;i++) {
+            const tmpCommand = commandList[i];
+            const tmpMatch = tmpCommand.match(/^\-\-env\=([a-z0-9]{1,})$/i);
+            if(tmpMatch) {
+                env = tmpMatch[1];
+            } else {
+                const lMatch = tmpCommand.match(/^\-env\=([a-z0-9]{1,})$/i);
+                if(lMatch) {
+                    env = lMatch[1];
+                }
+            }
+        }
+    }
+    return env;
 };
