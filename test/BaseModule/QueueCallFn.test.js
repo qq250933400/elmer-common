@@ -29,6 +29,7 @@ describe("Queue call function list", () => {
                 console.error(err);
                 done();
             });
+            done();
         });
     });
     describe("queueCallRaceAll method test", ()=>{

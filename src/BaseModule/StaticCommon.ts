@@ -394,3 +394,40 @@ export const getEnvFromCommand = (commandList:string[]): string => {
     }
     return env;
 };
+
+export const getCommand = (command: string[], cmdKey:string): string|boolean => {
+    let result: string;
+    let findKey = false;
+    let findValue = false;
+    const keyReg = /^[\-]{1,}/;
+    const keyValueReg = /^([a-z0-9]{1,})\=/i;
+    const isCmdKey = /^[\-]{1,}/.test(cmdKey);
+    if(command && command.length > 0) {
+        for(let i=0;i<command.length;i++) {
+            const cmd = command[i];
+            if(isCmdKey) {
+                if(cmd === cmdKey) {
+                    if(!keyReg.test(command[i+1])) {
+                        result = command[i+1];
+                        findValue = i+1 < command.length;
+                        break;
+                    }
+                }
+            } else {
+                if(!keyReg.test(cmd)) {
+                    const keyMatchValue = cmd.match(keyValueReg);
+                    if(keyMatchValue && keyMatchValue[1] === cmdKey) {
+                        result = cmd.replace(keyValueReg, "");
+                        findValue = true;
+                        break;
+                    } else {
+                        if(cmd === cmdKey && !keyReg.test(command[i-1])) {
+                            findKey = true;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return findValue ? result : (findKey ? true : result );
+};
