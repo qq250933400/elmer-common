@@ -365,6 +365,23 @@ export class StaticCommon {
     static getQuery(key: string, queryString?: string): string | undefined | null {
         return StaticCommon.getUri(queryString)[key];
     }
+    /**
+     * 获取字符串字节长度
+     * @param {string|number} val 输入字符串
+     */
+    static strLen(val: string|number): number {
+        const str = val.toString();
+        let len = 0;
+        for (let i = 0; i < str.length; i++) {
+            const c = str.charCodeAt(i);
+            if (c>255) {
+                len += 2;
+            } else {
+                len += 1;
+            }
+        }
+        return len;
+    }
 }
 
 export const defineReadonlyProperty = (target:any, propertyKey: string, propertyValue: any) => {
@@ -408,7 +425,7 @@ export const getCommand = (command: string[], cmdKey:string): string|boolean => 
             if(isCmdKey) {
                 if(cmd === cmdKey) {
                     if(!keyReg.test(command[i+1])) {
-                        result = command[i+1];
+                        result = command[i+1] === undefined ? null : command[i+1];
                         findValue = i+1 < command.length;
                         break;
                     }

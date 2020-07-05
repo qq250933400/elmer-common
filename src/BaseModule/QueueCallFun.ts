@@ -1,4 +1,5 @@
 import { StaticCommon } from "./StaticCommon";
+
 // tslint:disable-next-line: interface-over-type-literal
 export type TypeQueueCallOption = {
     id: string;
@@ -7,7 +8,13 @@ export type TypeQueueCallOption = {
     param: any;
     result: any;
 };
+
 export type TypeQueueCallFunction = (option:TypeQueueCallOption, param: any) => {};
+
+// tslint:disable-next-line: interface-over-type-literal
+export type TypeQueueCallConfig = {
+    throwException: boolean;
+};
 
 // tslint:disable-next-line: interface-over-type-literal
 export type TypeQueueCallParam = {
@@ -41,7 +48,7 @@ const callYieldFunc = function* <T>(callbackObj:{[P in keyof T]:Function}):any {
     return result;
 };
 
-export const queueCallRaceAll = async (paramList: TypeQueueCallParam[], fn?:TypeQueueCallFunction): Promise<any> => {
+export const queueCallRaceAll = async (paramList: TypeQueueCallParam[], fn?:TypeQueueCallFunction, option?: TypeQueueCallConfig): Promise<any> => {
     return new Promise((resolve, reject) => {
         if(paramList && paramList.length > 0) {
             const allStatus = {};
@@ -65,8 +72,8 @@ export const queueCallRaceAll = async (paramList: TypeQueueCallParam[], fn?:Type
                 }
             };
             paramList.map((item: TypeQueueCallParam, index:number) => {
-                const taskID = "queueCall" + index​​;
-                allStatus["queueCall" + index​​] = "PENDING";
+                const taskID = "queueCall" + index;
+                allStatus["queueCall" + index] = "PENDING";
                 ((param:TypeQueueCallParam, taskId: string): void => {
                     const callback = typeof param.fn === "function" ? param.fn : fn;
                     if(typeof callback === "function") {
@@ -119,8 +126,8 @@ export const queueCallRaceAll = async (paramList: TypeQueueCallParam[], fn?:Type
  * @param paramList {TypeQueueCallParam[]} 队列参数
  * @param fn 循环调用的方法，如果params.fn 没有设置将会调用fn参数
  */
-export const queueCallFunc = async (paramList:TypeQueueCallParam[], fn?:TypeQueueCallFunction): Promise<any> => {
-    return new Promise((resolve) => {
+export const queueCallFunc = async (paramList:TypeQueueCallParam[], fn?:TypeQueueCallFunction, option?: TypeQueueCallConfig): Promise<any> => {
+    return new Promise((resolve, reject) => {
         const doActionData = {};
         const Result = {};
         const keyArr = [];
@@ -134,15 +141,24 @@ export const queueCallFunc = async (paramList:TypeQueueCallParam[], fn?:TypeQueu
                             Result[key] = resp;
                             goNext(key);
                         }).catch((err) => {
-                            Result[key] = {
-                                statusCode: "QueueCall_602",
-                                // tslint:disable-next-line: object-literal-sort-keys
-                                excpetion: err
-                            };
-                            goNext(key);
+                            if(!option || !option.throwException) {
+                                Result[key] = {
+                                    statusCode: "QueueCall_602",
+                                    // tslint:disable-next-line: object-literal-sort-keys
+                                    excpetion: err
+                                };
+                                goNext(key);
+                            } else if(option && option.throwException) {
+                                reject({
+                                    exception: err,
+                                    message: err.message,
+                                    statusCode: "QueueCall_603",
+                                });
+                            }
                         });
                     } else {
                         Result[key] = yResult.value;
+                        goNext(key);
                     }
                 } else {
                     resolve(Result);
@@ -170,7 +186,8 @@ export const queueCallFunc = async (paramList:TypeQueueCallParam[], fn?:TypeQueu
                             id: options.id,
                             lastKey: lstKey,
                             lastResult: lstResult,
-                            params: options.params
+                            params: options.params,
+                            result: Result
                         };
                         if(StaticCommon.isArray(paramValue)) {
                             paramValue.unshift(_option);
