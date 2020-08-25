@@ -179,7 +179,7 @@ export class StaticCommon {
                 } else {
                     // 要更新数据的节点
                     if(typeof fn === "function") {
-                        fn(tmpData, cKey);
+                        fn(tmpData, cKey, value);
                     } else {
                         tmpData[cKey] = value;
                     }
