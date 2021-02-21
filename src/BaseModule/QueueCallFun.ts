@@ -116,7 +116,7 @@ export const queueCallRaceAll = async (paramList: TypeQueueCallParam[], fn?:Type
                 })(item, taskID);
             });
         } else {
-            resolve();
+            resolve({});
         }
     });
 };
