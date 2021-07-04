@@ -1,39 +1,39 @@
-export class StaticCommon {
+export class utils {
     static getType(val:any):string {
         return Object.prototype.toString.call(val);
     }
     static isString(val:any): val is string {
-        return StaticCommon.getType(val) === "[object String]";
+        return utils.getType(val) === "[object String]";
     }
     static isObject(val:any): val is object {
-        return StaticCommon.getType(val) === "[object Object]";
+        return utils.getType(val) === "[object Object]";
     }
     static isArray(val:any):val is any[] {
-        return StaticCommon.getType(val) === "[object Array]";
+        return utils.getType(val) === "[object Array]";
     }
     static isNumeric(val:any):boolean {
         return !isNaN(val);
     }
     static isDOM(val:any):val is HTMLElement {
-        return /^(\[object\s*)HTML([a-zA-Z]*)(Element\])$/.test(StaticCommon.getType(val));
+        return /^(\[object\s*)HTML([a-zA-Z]*)(Element\])$/.test(utils.getType(val));
     }
     static isSVGDOM(val:any): val is SVGAElement {
-        return  /^\[object\sSVG([a-zA-Z]*)Element\]$/.test(StaticCommon.getType(val));
+        return  /^\[object\sSVG([a-zA-Z]*)Element\]$/.test(utils.getType(val));
     }
     static isFunction(val:any):val is Function {
-        return StaticCommon.getType(val) === "[object Function]";
+        return utils.getType(val) === "[object Function]";
     }
     static isNodeList(val:any):val is NodeList {
-        return StaticCommon.getType(val) === "[object NodeList]";
+        return utils.getType(val) === "[object NodeList]";
     }
     static isRegExp(val:any):val is RegExp {
-        return StaticCommon.getType(val) === "[object RegExp]";
+        return utils.getType(val) === "[object RegExp]";
     }
     static isEmpty(val:any):boolean {
-        return val === undefined || val === null || (StaticCommon.isString(val) && val.length <= 0);
+        return val === undefined || val === null || (utils.isString(val) && val.length <= 0);
     }
     static isPromise(val:any): val is Promise<any> {
-        return StaticCommon.getType(val) === "[object Promise]";
+        return utils.getType(val) === "[object Promise]";
     }
     static isGlobalObj(val:any): boolean {
         return this.getType(val) === "[object global]";
@@ -46,8 +46,8 @@ export class StaticCommon {
         if(a == null || b== null) {
             return a === b;
         }
-        const classNameA = StaticCommon.getType(a),
-            classNameB = StaticCommon.getType(b);
+        const classNameA = utils.getType(a),
+            classNameB = utils.getType(b);
         if(classNameA !== classNameB) {
             return false;
         } else {
@@ -110,12 +110,12 @@ export class StaticCommon {
             while (index <= keyArr.length - 1) {
                 keyStr = keyArr[index];
                 isFind = index === keyArr.length - 1;
-                if(StaticCommon.isArray(tmpData) && StaticCommon.isNumeric(keyStr)) {
+                if(utils.isArray(tmpData) && utils.isNumeric(keyStr)) {
                     keyStr = parseInt(keyStr, 10);
                 }
                 if(!isFind) {
                     const nextKey = keyArr[keyArr.length - 1];
-                    if(StaticCommon.isArray(tmpData) || StaticCommon.isObject(tmpData) || StaticCommon.isGlobalObj(tmpData)) {
+                    if(utils.isArray(tmpData) || utils.isObject(tmpData) || utils.isGlobalObj(tmpData)) {
                         //
                         tmpData = tmpData[keyStr];
                     }
@@ -151,13 +151,13 @@ export class StaticCommon {
      */
     static setValue(data:object, key:string, value:any, fn?: Function): boolean {
         let isUpdate = false;
-        if(!StaticCommon.isObject(data)) {
+        if(!utils.isObject(data)) {
             throw new Error("The parameter of data is not a object");
         }
-        if(StaticCommon.isEmpty(key)) {
+        if(utils.isEmpty(key)) {
             throw new Error("The key can not be an empty string");
         }
-        if(!StaticCommon.isEmpty(value)) {
+        if(!utils.isEmpty(value)) {
             const keyArr = key.split(".");
             const keyLen = keyArr.length;
             let index = 0;
@@ -166,8 +166,8 @@ export class StaticCommon {
                 const cKey = keyArr[index];
                 if(index < keyLen - 1) {
                     // 不是最后一个节点
-                    if(!StaticCommon.isEmpty(tmpData[cKey])) {
-                        if(StaticCommon.isObject(tmpData[cKey])) {
+                    if(!utils.isEmpty(tmpData[cKey])) {
+                        if(utils.isObject(tmpData[cKey])) {
                             tmpData = tmpData[cKey];
                         } else {
                             throw new Error("Can not set value to attribute of " + cKey);
@@ -347,7 +347,7 @@ export class StaticCommon {
         return (S4() + S4() + "-" + S4() + "-" + S4() + "-" + S4() + "-" + S4() + S4());
     }
     static getUri(queryString?: string): any {
-        let str = !StaticCommon.isEmpty(queryString) ? queryString : (location.search || "");
+        let str = !utils.isEmpty(queryString) ? queryString : (location.search || "");
         let strArr = [];
         const result = {};
         str = str.replace(/^\?/, "").replace(/\#[\s\S]*$/, "");
@@ -363,7 +363,7 @@ export class StaticCommon {
         return result;
     }
     static getQuery(key: string, queryString?: string): string | undefined | null {
-        return StaticCommon.getUri(queryString)[key];
+        return utils.getUri(queryString)[key];
     }
     /**
      * 获取字符串字节长度

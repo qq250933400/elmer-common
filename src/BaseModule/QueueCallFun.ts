@@ -1,4 +1,4 @@
-import { StaticCommon } from "./StaticCommon";
+import { utils } from "../utils";
 
 // tslint:disable-next-line: interface-over-type-literal
 export type TypeQueueCallOption = {
@@ -85,7 +85,7 @@ export const queueCallRaceAll = async (paramList: TypeQueueCallParam[], fn?:Type
                             param: param.params,
                             result: allResult
                         }, param.params);
-                        if(StaticCommon.isPromise(callbackResult)) {
+                        if(utils.isPromise(callbackResult)) {
                             callbackResult.then((resp:any) => {
                                 allResult[param.id] = resp;
                                 allStatus[taskID] = "OK";
@@ -171,7 +171,7 @@ export const queueCallFunc = async (paramList:TypeQueueCallParam[], fn?:TypeQueu
             const nextKey = keyArr[index + 1];
             doNext(nextKey, key)();
         };
-        if(StaticCommon.isArray(paramList) && paramList.length>0) {
+        if(utils.isArray(paramList) && paramList.length>0) {
             paramList.map((tParam:TypeQueueCallParam, index:number) => {
                 let lastKey = index > 0 && paramList[index - 1] ? paramList[index - 1].id : undefined;
                 keyArr.push(tParam.id);
@@ -189,7 +189,7 @@ export const queueCallFunc = async (paramList:TypeQueueCallParam[], fn?:TypeQueu
                             params: options.params,
                             result: Result
                         };
-                        if(StaticCommon.isArray(paramValue)) {
+                        if(utils.isArray(paramValue)) {
                             paramValue.unshift(_option);
                             return operateCallback.apply(handler, paramValue);
                         } else {
