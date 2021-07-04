@@ -1,5 +1,5 @@
 export * from "./BaseModule/Common";
-export * from "./BaseModule/StaticCommon";
+export * from "./utils";
 export * from "./Canvas/Canvas";
 export * from "./Animation/MathAnimationApi";
 export * from "./BaseModule/QueueCallFun";
