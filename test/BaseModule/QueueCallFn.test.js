@@ -29,11 +29,10 @@ describe("Queue call function list", () => {
                 console.error(err);
                 done();
             });
-            done();
         });
     });
     describe("queueCallRaceAll method test", ()=>{
-        it("given more than one async function, then call back should be called after all async function has been called", async (done) => {
+        it("given more than one async function, then call back should be called after all async function has been called", (done) => {
             queueCallRaceAll([{
                 id:"test1",
                 params: "demo1",
@@ -58,9 +57,7 @@ describe("Queue call function list", () => {
             }).catch(() => {
                 console.log("-----2");
                 done();
-            })
-            console.log("----")
-            assert.equal(1,1);
+            });
         });
     });
 });

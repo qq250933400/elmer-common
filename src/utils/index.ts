@@ -38,6 +38,12 @@ export class utils {
     static isGlobalObj(val:any): boolean {
         return this.getType(val) === "[object global]";
     }
+    static isNumber(val:any): boolean {
+        return !isNaN(val);
+    }
+    static isBoolean(val:any): val is boolean {
+        return this.getType(val) === "[object Boolean]";
+    }
     // tslint:disable-next-line:no-shadowed-variable
     static isEqual(a:any,b:any): boolean {
         if(a===b) {
