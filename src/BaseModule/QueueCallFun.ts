@@ -14,6 +14,7 @@ export type TypeQueueCallFunction = (option:TypeQueueCallOption, param: any) => 
 // tslint:disable-next-line: interface-over-type-literal
 export type TypeQueueCallConfig = {
     throwException: boolean;
+    paramConvert?: Function;
 };
 
 // tslint:disable-next-line: interface-over-type-literal
@@ -145,7 +146,7 @@ export const queueCallFunc = async (paramList:TypeQueueCallParam[], fn?:TypeQueu
                                 Result[key] = {
                                     statusCode: "QueueCall_602",
                                     // tslint:disable-next-line: object-literal-sort-keys
-                                    excpetion: err
+                                    exception: err
                                 };
                                 goNext(key);
                             } else if(option && option.throwException) {
@@ -172,8 +173,9 @@ export const queueCallFunc = async (paramList:TypeQueueCallParam[], fn?:TypeQueu
             doNext(nextKey, key)();
         };
         if(utils.isArray(paramList) && paramList.length>0) {
-            paramList.map((tParam:TypeQueueCallParam, index:number) => {
+            paramList.map((xParam:TypeQueueCallParam, index:number) => {
                 let lastKey = index > 0 && paramList[index - 1] ? paramList[index - 1].id : undefined;
+                const tParam = typeof option?.paramConvert === "function" ? option.paramConvert(xParam) : xParam;
                 keyArr.push(tParam.id);
                 doActionData[tParam.id] = ((options, lKey) => {
                     return (lstResult) => {
