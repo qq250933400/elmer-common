@@ -12,18 +12,20 @@ export type TypeQueueCallOption = {
 export type TypeQueueCallFunction = (option:TypeQueueCallOption, param: any) => {};
 
 // tslint:disable-next-line: interface-over-type-literal
-export type TypeQueueCallConfig = {
-    throwException: boolean;
-    paramConvert?: Function;
-};
-
-// tslint:disable-next-line: interface-over-type-literal
 export type TypeQueueCallParam = {
     id: string;
-    params: any;
+    params?: any;
     owner?: any;
     fn?: TypeQueueCallFunction;
 };
+
+// tslint:disable-next-line: interface-over-type-literal
+export type TypeQueueCallConfig = {
+    throwException: boolean;
+    paramConvert?: Function;
+    onBefore?(params: TypeQueueCallParam[]): void;
+};
+
 
 const callYieldFunc = function* <T>(callbackObj:{[P in keyof T]:Function}):any {
     const result = {};
@@ -132,6 +134,7 @@ export const queueCallFunc = async (paramList:TypeQueueCallParam[], fn?:TypeQueu
         const doActionData = {};
         const Result = {};
         const keyArr = [];
+        const newParamsList = [];
         let yieldResult:Generator = null;
         const doNext =(key:any, lastKey:any):Function => {
             return () => {
@@ -173,22 +176,24 @@ export const queueCallFunc = async (paramList:TypeQueueCallParam[], fn?:TypeQueu
             doNext(nextKey, key)();
         };
         if(utils.isArray(paramList) && paramList.length>0) {
+            typeof option?.onBefore === "function" && option?.onBefore(paramList);
             paramList.map((xParam:TypeQueueCallParam, index:number) => {
                 let lastKey = index > 0 && paramList[index - 1] ? paramList[index - 1].id : undefined;
-                const tParam = typeof option?.paramConvert === "function" ? option.paramConvert(xParam) : xParam;
+                const tParam = typeof option?.paramConvert === "function" ? option.paramConvert(xParam, index) || xParam : xParam;
                 keyArr.push(tParam.id);
-                doActionData[tParam.id] = ((options, lKey) => {
+                newParamsList.push(tParam);
+                doActionData[tParam.id] = ((opt, lKey) => {
                     return (lstResult) => {
                         const lstKey = lKey;
-                        const paramValue = options.params;
-                        const handler = options.owner || this;
-                        const operateCallback = typeof options.fn === "function" ? options.fn : fn;
+                        const paramValue = opt.params;
+                        const handler = opt.owner || this;
+                        const operateCallback = typeof opt.fn === "function" ? opt.fn : fn;
                         // tslint:disable-next-line: variable-name
                         const _option = {
-                            id: options.id,
+                            id: opt.id,
                             lastKey: lstKey,
                             lastResult: lstResult,
-                            params: options.params,
+                            params: opt.params,
                             result: Result
                         };
                         if(utils.isArray(paramValue)) {
@@ -202,7 +207,7 @@ export const queueCallFunc = async (paramList:TypeQueueCallParam[], fn?:TypeQueu
                 lastKey = null;
             });
             yieldResult = callYieldFunc(doActionData);
-            doNext(paramList[0].id, undefined)();
+            doNext(newParamsList[0].id, undefined)();
         } else {
             resolve({});
         }
