@@ -1,7 +1,7 @@
 var describe = require("mocha").describe;
 var assert = require("assert");
-var getCommand = require("../../lib/BaseModule/StaticCommon").getCommand;
-var StaticCommon = require("../../lib/BaseModule/StaticCommon").StaticCommon;
+var getCommand = require("../../lib/utils").getCommand;
+var StaticCommon = require("../../lib/utils").utils;
 // var StaticCommon = common.StaticCommon;
 // var getCommand  = common.getCommand;
 var JSDOM = require("jsdom").JSDOM;

@@ -1,4 +1,4 @@
-import { StaticCommon } from "./StaticCommon";
+import { utils } from "../utils";
 export class Common {
     getType(val:any):string {
         return Object.prototype.toString.call(val);
@@ -95,7 +95,7 @@ export class Common {
         }
     }
     getValue<T>(data:object, key:string, defaultValue?: any): T {
-        return StaticCommon.getValue<T>(data, key, defaultValue);
+        return utils.getValue<T>(data, key, defaultValue);
     }
     /**
      * 给指定对象设置属性值
@@ -105,7 +105,7 @@ export class Common {
      * @param fn 自定义设置值回调
      */
     setValue(data:object, key:string, value:any, fn?: Function): boolean {
-        return StaticCommon.setValue(data, key, value, fn);
+        return utils.setValue(data, key, value, fn);
     }
     /**
      * 获取随机ID
@@ -264,9 +264,9 @@ export class Common {
         return (S4() + S4() + "-" + S4() + "-" + S4() + "-" + S4() + "-" + S4() + S4());
     }
     getUri():any {
-        return StaticCommon.getUri();
+        return utils.getUri();
     }
     getQuery(key:string):string|undefined|null {
-        return StaticCommon.getQuery(key);
+        return utils.getQuery(key);
     }
 }

@@ -1,6 +1,6 @@
 import { Common } from "../BaseModule/Common";
 import { queueCallFunc, TypeQueueCallParam } from "../BaseModule/QueueCallFun";
-import { getCommand, StaticCommon } from "../BaseModule/StaticCommon";
+import { getCommand, utils } from "../utils";
 
 const path = require("path");
 const fs = require("fs");
@@ -30,9 +30,9 @@ export default class CommandHelper extends Common {
         super();
         this._options[this._helpKey] = {
             desc: "Print help message",
-            length: StaticCommon.strLen(this._helpKey)
+            length: utils.strLen(this._helpKey)
         };
-        this._maxOptionLength = StaticCommon.strLen(this._helpKey);
+        this._maxOptionLength = utils.strLen(this._helpKey);
         this._processArgv = processArgv;
     }
     /**
@@ -53,7 +53,7 @@ export default class CommandHelper extends Common {
     }
     command(cmd:string, desc?: string, action?:Function): CommandHelper {
         if(!/^[\-]{1,}/.test(cmd)) {
-            const len = StaticCommon.strLen(cmd);
+            const len = utils.strLen(cmd);
             this._command[cmd] = {
                 desc,
                 length: len,
@@ -68,7 +68,7 @@ export default class CommandHelper extends Common {
         return this;
     }
     option(option: string, desc: string, action?:Function): CommandHelper {
-        const len = StaticCommon.strLen(option);
+        const len = utils.strLen(option);
         this._options[option] = {
             desc,
             length: len,
@@ -96,7 +96,7 @@ export default class CommandHelper extends Common {
         return this;
     }
     description(keyName: string, description: string): CommandHelper {
-        const len = StaticCommon.strLen(keyName);
+        const len = utils.strLen(keyName);
         this._desc[keyName] = {
             desc: description,
             length: len,
