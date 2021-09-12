@@ -155,7 +155,7 @@ export const queueCallFunc = async (paramList:TypeQueueCallParam[], fn?:TypeQueu
                             } else if(option && option.throwException) {
                                 reject({
                                     exception: err,
-                                    message: err.message,
+                                    message: err?.message,
                                     statusCode: "QueueCall_603",
                                 });
                             }
