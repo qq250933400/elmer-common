@@ -1,6 +1,6 @@
 {
     "name": "elmer-common",
-    "version": "3.1.6",
+    "version": "3.1.7",
     "description": "JS常用方法，算法",
     "typings": "lib/index.d.ts",
     "main": "lib/index.js",
