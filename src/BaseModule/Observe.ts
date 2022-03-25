@@ -52,9 +52,10 @@ export class Observe<EventHandler={}> {
         return new Promise((resolve, reject) => {
             if(this.listener[eventName]) {
                 const eventIds = this.listener[eventName].eventIds || [];
-                queueCallFunc([ eventIds, {
+                queueCallFunc([ ...eventIds, {
                     id: "LastResult",
                     params: "",
+                    // tslint:disable-next-line: object-literal-sort-keys
                     fn: (opt) => {
                         return opt.lastResult;
                     }
@@ -63,10 +64,17 @@ export class Observe<EventHandler={}> {
                     return callback(opt, ...args);
                 }, {
                     throwException: true,
-                    paramConvert: (evtId: string) => ({
-                        id: evtId,
-                        params: evtId
-                    })
+                    // tslint:disable-next-line: object-literal-sort-keys
+                    paramConvert: (evtId: string) => {
+                        if(typeof evtId === "string") {
+                            return {
+                                id: evtId,
+                                params: evtId
+                            };
+                        } else {
+                            return evtId;
+                        }
+                    }
                 }).then((data) => resolve(data.LastResult))
                 .catch(reject);
             } else {

@@ -21,12 +21,10 @@ describe("Queue call function list", () => {
                     }
                 });
             }).then((resp) => {
-                console.log(resp, "-----------Return value");
                 done();
                 assert.equal(resp["test1"], 32);
                 // assert.deepEqual(resp["test2"], 9);
             }).catch((err) => {
-                console.error(err);
                 done();
             });
         });
@@ -37,7 +35,6 @@ describe("Queue call function list", () => {
                 id:"test1",
                 params: "demo1",
                 fn: () => {
-                    console.log("---Check1");
                     return new Promise((resolve) => {
                         setTimeout(() => {
                             resolve();
@@ -45,17 +42,14 @@ describe("Queue call function list", () => {
                     });
                 }
             }], ()=>{
-                console.log("----Check2");
                 return new Promise((resolve) => {
                     setTimeout(() => {
                         resolve();
                     },200);
                 });
             }).then(() => {
-                console.log("-----1");
                 done();
             }).catch(() => {
-                console.log("-----2");
                 done();
             });
         });
