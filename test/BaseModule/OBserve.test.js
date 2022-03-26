@@ -9,10 +9,11 @@ describe("Observe", () => {
         const fn = obj.on("name", () => {});
         assert.equal(typeof fn, "function");
     });
-    it("触发事件", () => {
-        obj.on("test", () => {
-            return "hello world";
+    it("触发事件", async() => {
+        obj.on("test", (a) => {
+            return "hello world_" + a;
         });
-        return obj.emit("test", "demo");
+        const objResult = await obj.emit("test", "demo");
+        assert.deepEqual(objResult, "hello world_demo");
     });
 });

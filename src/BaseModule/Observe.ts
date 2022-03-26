@@ -29,7 +29,7 @@ export class Observe<EventHandler={}> {
             if(this.listener[eventName].eventIds.length <= 0) {
                 delete this.listener[eventName];
             }
-        }
+        };
     }
     /**
      * 解除事件绑定， 如果eventName为空时默认删除所有事件
@@ -61,7 +61,7 @@ export class Observe<EventHandler={}> {
                     }
                 } ], (opt, eventId)=>{
                     const callback = this.listener[eventName].handlers[eventId];
-                    return callback(opt, ...args);
+                    return callback(...args);
                 }, {
                     throwException: true,
                     // tslint:disable-next-line: object-literal-sort-keys
