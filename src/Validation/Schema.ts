@@ -1,21 +1,40 @@
 import { Service } from "../decorators";
 import { utils } from "../utils";
 
+type TypeSchemaDataType = "String" | "Number" | "Object" | "Array" | "Boolean" | "Any" | RegExp | String[] | String;
+
+export interface ISchemaProperty<FormatCallback={}> {
+    type: TypeSchemaDataType;
+    format?: keyof FormatCallback;
+    isRequired?: boolean;
+    defaultValue?: any;
+}
+
+export type ISchemaProperties<T={}, FormatCallback={}> = {
+    [ P in keyof T ]: ISchemaProperty<FormatCallback> | {
+        type: "Object",
+        properties: ISchemaProperties<T[P], FormatCallback>
+    }
+};
+
 interface ISchemaValidate {
-    (data: any): void;
-    (data: any, schema: any): void;
-    (data: any, schema: any, name: string): void;
-    (data: any, name: string): void;
+    (data: any): boolean;
+    // tslint:disable-next-line: unified-signatures
+    (data: any, name: string): boolean;
+    <T={}, callbacks={}>(data: any, schema: ISchemaProperties<T, callbacks>): boolean;
+    // tslint:disable-next-line: unified-signatures
+    <T={}, callbacks={}>(data: any, schema: ISchemaProperties<T, callbacks>, name: string): boolean;
 }
 
 abstract class ASchema {
     abstract validate: ISchemaValidate;
 }
 
+// tslint:disable-next-line: max-classes-per-file
 @Service
-export class Schema extends ASchema{
+export class Schema extends ASchema {
+    public message: string = "";
     private schemaConfig: any = {};
-    message: string = "";
     validate:ISchemaValidate = (data: any, schema?: any, name?: string): boolean => {
         const outscopeTypes = [];
         let pass = false;
@@ -33,10 +52,10 @@ export class Schema extends ASchema{
                 this.doValidate(data, schema, name || "Unknow", []);
             } else if(utils.isString(schema)) {
                 // 验证指定规则name
-                this.doValidate(data, this.schemaConfig[schema as string] as any, schema as string, []);
+                this.doValidate(data, this.schemaConfig[schema], schema, []);
             } else {
-                const name = Object.keys(this.schemaConfig)[0];
-                this.doValidate(data, this.schemaConfig[name], name, []);
+                const vname:string = Object.keys(this.schemaConfig)[0];
+                this.doValidate(data, this.schemaConfig[vname], vname, []);
             }
             pass = true;
         } catch(e) {
@@ -49,6 +68,7 @@ export class Schema extends ASchema{
                     delete this.schemaConfig[key];
                 });
             }
+            // tslint:disable-next-line: no-unsafe-finally
             return pass;
         }
     }
@@ -142,7 +162,7 @@ export class Schema extends ASchema{
                     }
                 }
             } else {
-                throw new Error(`配置${name}定义类型错误(${keyPath})。`)
+                throw new Error(`配置${name}定义类型错误(${keyPath})。`);
             }
         } else {
             if(/^Array\<[a-zA-Z0-9]{1,}\>$/.test(type)) {
@@ -154,7 +174,7 @@ export class Schema extends ASchema{
             }
         }
     }
-    private checkType(data: any, type:String|RegExp, keyPath: string, name: string) {
+    private checkType(data: any, type:String|RegExp, keyPath: string, name: string): boolean {
         if(undefined === data || null === data) {
             return true;
         } else {
@@ -222,4 +242,4 @@ export class Schema extends ASchema{
             }
         }
     }
-};
+}
