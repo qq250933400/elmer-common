@@ -14,8 +14,9 @@ export const Autowired = (...args: any[]) => {
                 Reflect.getMetadata(CONST_DECORATOR_FOR_MODULE_INSTANCEID, target.constructor);
                 if(!utils.isEmpty(instanceId)) {
                     return createInstance(TargetFactory, instanceId);
+                } else {
+                    return new Error("Not running in the application");
                 }
-                return instanceId;
             },
             set: () => {
                 throw new Error("使用Autowired初始化的对象不允许重写.");
