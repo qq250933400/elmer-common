@@ -1,4 +1,4 @@
-import { Service } from "../decorators/Service";
+import { Service } from "../decorators";
 import { utils } from "../utils";
 
 type TypeSortOptions = {
