@@ -1,73 +1,211 @@
 import "reflect-metadata";
+import { queueCallFunc } from "../BaseModule/QueueCallFun";
 import { utils } from "../utils";
-
-export type TypePluginFundation = "NodeEvent" | "NodeRender";
-
-export const decoratorStorage = {
-    classPool: {},
-    execIndex: {},
-    objPool: {}
-};
-
-export const DECORATORS_CLASS_TYPE = "DECORATORS_CLASS_TYPE";
-export const DECORATORS_CLASS_TYPE_SERVICE = "DECORATORS_CLASS_SERVICE";
-export const DECORATORS_CLASS_TYPE_MODEL = "DECORATORS_CLASS_MODEL";
-export const DECORATORS_CLASS_TYPE_RENDER_PLUGIN = "DECORATORS_CLASS_RENDER_PLUGIN"; // 渲染中间件
-export const DECORATORS_CLASS_OPTIONS = "";
-export const DECORATORS_FUNDATION_COMPONENTS = "DECORATORS_FUNDATION_COMPONENTS"; // 功能性装饰器
-export const DECORATORS_MODEL_ID = "DECORATORS_ID";
-
-export const saveToObjPool = (modelId: string, obj: any): void => {
-    decoratorStorage.objPool[modelId] = obj;
-};
-
-export const getFromObjPool = <T={}>(modelId: string): T => {
-    return decoratorStorage.objPool[modelId];
-};
-
+import {
+    CONST_DECORATOR_FOR_MODULE_TYPE,
+    CONST_DECORATOR_FOR_MODULE_CLASSID,
+    CONST_DECORATOR_FOR_MODULE_INSTANCEID,
+    CONST_DECORATOR_FOR_MODULE_INIT,
+    CONST_DECORATOR_FOR_MODULE_ON_INIT
+} from "./const";
 /**
- * 将定义类保存到资源池
- * @param type 定义类型
- * @param ClassFactory 类
+ * 定义模块类型
  */
-export const saveToClassPool = (type: string, ClassFactory: new(...args: any) => any): void => {
-    const id = Reflect.getMetadata(DECORATORS_MODEL_ID, ClassFactory);
-    if(utils.isEmpty(id)) {
-        throw new Error("类装饰器定义错误，DECORATORS_ID缺失.");
+ export enum EnumFactoryModuleType {
+    /** 应用程序级别，在一个应用程序内只有一个object对象 */
+    AppService = 1,
+    /** 请求级别，每次发起请求将会创建一个新的object对象，并在请求结束释放 */
+    RequestService,
+    /** 当超过一个应用程序在运行的时候全局只有一个object对象 */
+    GlobalService
+}
+
+type TypeCreateInstanceOptions = {
+    args: any[];
+    classType: EnumFactoryModuleType;
+    shouldInit: boolean;
+    uid: string;
+};
+type TypeCreateInstanceCallback = <T={}>(factory: new(...args:any[]) => any, option: TypeCreateInstanceOptions) => T;
+
+const instancePool: any = {};
+const classPool: any[] = [];
+const globalObjPool: any = {};
+
+const defineFactoryService = (Target: new(...args: any[]) => any, type: EnumFactoryModuleType) => {
+    const typeName = (EnumFactoryModuleType)[type];
+    const uid = typeName + "_" + utils.guid();
+    const checkType = Reflect.getMetadata(CONST_DECORATOR_FOR_MODULE_TYPE, Target);
+    if(utils.isEmpty(checkType)) {
+        Reflect.defineMetadata(CONST_DECORATOR_FOR_MODULE_TYPE, type, Target);
+        Reflect.defineMetadata(CONST_DECORATOR_FOR_MODULE_CLASSID, uid, Target);
+        classPool.push(Target);
     } else {
-        if(!decoratorStorage.classPool[type]) {
-            decoratorStorage.classPool[type] = {};
-        }
-        decoratorStorage.classPool[type][id] = ClassFactory;
+        throw new Error(`多个定义模块类型装饰器不能同时使用.(${typeName})`);
     }
 };
-
-/**
- * 从类资源池获取对象
- * @param type 定义Model类型
- * @param id 定义的Model Id
- * @returns any
- */
-export const getFromClassPool = (type: TypePluginFundation, id: string): any => {
-    return decoratorStorage.classPool[type] ? decoratorStorage.classPool[type][id] : null;
+const invokeInit = (Target: new(...args:any[]) => any, obj: any) => {
+    const initCallbacks:Function[] = Reflect.getMetadata(CONST_DECORATOR_FOR_MODULE_INIT, Target) || [];
+    // const instanceId = Reflect.getMetadata(CONST_DECORATOR_FOR_MODULE_INSTANCEID, Target);
+    let index = 0;
+    if(initCallbacks.length > 0) {
+        queueCallFunc(initCallbacks as any[], (opt, fn: Function) => {
+            return fn(obj, opt);
+        }, {
+            throwException: false,
+            paramConvert: (fn) => {
+                index += 1;
+                return {
+                    id: "init_" + index,
+                    params: fn
+                };
+            }
+        }).then(() => {
+            const initData = Reflect.getMetadata(CONST_DECORATOR_FOR_MODULE_ON_INIT, obj);
+            if(initData) {
+                initData.callback.apply(obj, initData.args || []);
+            }
+        }).catch((err) => {
+            throw err;
+        });
+    }
+};
+export const delegateInit = (fn: Function) => {
+    return (Target: new(...args: any[]) => any) => {
+        const initCallbacks:Function[] = Reflect.getMetadata(CONST_DECORATOR_FOR_MODULE_INIT, Target) || [];
+        initCallbacks.push(fn);
+        Reflect.defineMetadata(CONST_DECORATOR_FOR_MODULE_INIT, initCallbacks, Target);
+    };
+};
+export const onInit = (...args: any[]) => {
+    return (target: any, attr: string, value: PropertyDescriptor) => {
+        Reflect.defineMetadata(CONST_DECORATOR_FOR_MODULE_ON_INIT, {
+            args,
+            callback: value.value,
+            name: attr
+        }, target);
+    };
+}
+export const AppService = (Target: new(...args: any[]) => any) => {
+    defineFactoryService(Target, EnumFactoryModuleType.AppService);
 };
 
-export const getAllClassFromPool = (type: TypePluginFundation): any => {
-    return decoratorStorage.classPool[type];
+export const RequestService = (Target: new(...args: any[]) => any) => {
+    defineFactoryService(Target, EnumFactoryModuleType.RequestService);
 };
-/**
- * 保存插件执行顺序索引
- * @param type - 插件类型
- * @param index - 执行索引
- */
-export const setExecIndex = (type: TypePluginFundation, index: string[]|number[]): void => {
-    decoratorStorage.execIndex[type] = index;
+
+export const Service = (Target: new(...args: any[]) => any) => {
+    defineFactoryService(Target, EnumFactoryModuleType.GlobalService);
 };
-/**
- * 获取插件执行顺序索引
- * @param type - 插件类型
- * @return - 执行索引
- */
-export const getExecIndex = (type: TypePluginFundation): string[]|number[] => {
-    return decoratorStorage.execIndex[type];
+
+
+export const createInstance = <T={}>(Factory: new(...args:any[]) => T, instanceId?: string, callback?: TypeCreateInstanceCallback):T => {
+    const instanceAppId: string = instanceId || "app_" + utils.guid();
+    const paramTypes: Function[] = Reflect.getMetadata("design:paramtypes", Factory) || [];
+    // -------
+    const classType: EnumFactoryModuleType = Reflect.getMetadata(CONST_DECORATOR_FOR_MODULE_TYPE, Factory);
+    const classId = Reflect.getMetadata(CONST_DECORATOR_FOR_MODULE_CLASSID, Factory);
+    let instance: any, shouldInit = false;
+    if (!instancePool[instanceAppId]) {
+        instancePool[instanceAppId] = {};
+    }
+    /** Before init params should bind instance id, make sure the inject module can got the id */
+    Reflect.defineMetadata(CONST_DECORATOR_FOR_MODULE_INSTANCEID, instanceAppId, Factory);
+    const paramsInstance: any[] = paramTypes.map((Fn: new(...args:any) => any) => {
+        if(classPool.indexOf(Fn) < 0) {
+            throw new Error(`${Fn.name}没有注册`);
+        } else {
+            const classType: EnumFactoryModuleType = Reflect.getMetadata(CONST_DECORATOR_FOR_MODULE_TYPE, Fn);
+            if(classType === EnumFactoryModuleType.GlobalService) {
+                const objId = Reflect.getMetadata(CONST_DECORATOR_FOR_MODULE_CLASSID, Fn);
+                if(globalObjPool[objId]) {
+                    return globalObjPool[objId];
+                } else {
+                    return createInstance(Fn as any, instanceAppId, callback);
+                }
+            } else if(classType === EnumFactoryModuleType.RequestService) {
+                return createInstance(Fn as any, instanceAppId, callback);
+            } else if(classType === EnumFactoryModuleType.AppService) {
+                const objId = Reflect.getMetadata(CONST_DECORATOR_FOR_MODULE_CLASSID, Fn);
+                if(instancePool[instanceAppId] && instancePool[instanceAppId][objId]) {
+                    return instancePool[instanceAppId][objId];
+                } else {
+                    if(!instancePool[instanceAppId]) {
+                        instancePool[instanceAppId] = {};
+                    }
+                    const obj = createInstance(Fn as any, instanceAppId, callback);
+                    instancePool[instanceAppId][objId] = obj;
+                    return obj;
+                }
+            } else {
+                return new Fn();
+            }
+        }
+    });
+   
+    if(classType === EnumFactoryModuleType.GlobalService) {
+        if(globalObjPool[classId]) {
+            instance = globalObjPool[classId];
+        } else {
+            instance = new Factory(...paramsInstance);
+            shouldInit = true;
+            globalObjPool[classId] = instance;
+        }
+    } else if(classType === EnumFactoryModuleType.RequestService) {
+        const reqInitEvent = {
+            args: paramsInstance,
+            shouldInit: false,
+            classType,
+            uid: classId
+        };
+        instance = typeof callback === "function" ? callback(Factory, reqInitEvent) : null;
+        shouldInit = reqInitEvent.shouldInit;
+        if(!instance) {
+            throw new Error("Failed to initialize request factory");
+        }
+    } else if(classType === EnumFactoryModuleType.AppService) {
+        if(instancePool[instanceAppId][classId]) {
+            instance = instancePool[instanceAppId][classId];
+        } else {
+            instance = new Factory(...paramsInstance);
+            instancePool[instanceAppId][classId] = instance;
+            shouldInit = true;
+        }
+    } else {
+        const reqInitEvent = {
+            args: paramsInstance,
+            shouldInit: false,
+            classType,
+            uid: classId
+        };
+        instance = typeof callback === "function" ? callback(Factory, reqInitEvent) : null;
+        shouldInit = reqInitEvent.shouldInit;
+        if(!instance) {
+            instance = Factory;
+        }
+    }
+    Reflect.defineMetadata(CONST_DECORATOR_FOR_MODULE_INSTANCEID, instanceAppId, instance);
+    shouldInit && invokeInit(Factory, instance);
+    
+    return instance;
+}
+
+export const getObjFromInstance = (Target: new(...args: any[]) => any, instance: any, callback?: TypeCreateInstanceCallback) => {
+    const instanceId = Reflect.getMetadata(CONST_DECORATOR_FOR_MODULE_INSTANCEID, instance) ||
+        Reflect.getMetadata(CONST_DECORATOR_FOR_MODULE_INSTANCEID, instance.constructor);
+    const targetObj = createInstance(Target, instanceId, callback);
+
+    return targetObj;
+};
+
+export const GetInstanceId = (target: any, attrKey: string) => {
+    Object.defineProperty(target, attrKey, {
+        configurable: false,
+        enumerable: true,
+        get: () => {
+            const instanceId = Reflect.getMetadata(CONST_DECORATOR_FOR_MODULE_INSTANCEID, target) ||
+                Reflect.getMetadata(CONST_DECORATOR_FOR_MODULE_INSTANCEID, target.constructor);
+            return instanceId;
+        }
+    });
 };

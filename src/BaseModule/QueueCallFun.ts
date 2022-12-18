@@ -20,10 +20,10 @@ export type TypeQueueCallParam = {
 };
 
 // tslint:disable-next-line: interface-over-type-literal
-export type TypeQueueCallConfig = {
+export type TypeQueueCallConfig<T={}> = {
     throwException: boolean;
-    paramConvert?: Function;
-    onBefore?(params: TypeQueueCallParam[]): void;
+    paramConvert?: (param: TypeQueueCallParam |T, index: number) => TypeQueueCallParam;
+    onBefore?(params: TypeQueueCallParam[]|T[]): void;
 };
 
 
@@ -129,7 +129,7 @@ export const queueCallRaceAll = async (paramList: TypeQueueCallParam[], fn?:Type
  * @param paramList {TypeQueueCallParam[]} 队列参数
  * @param fn 循环调用的方法，如果params.fn 没有设置将会调用fn参数
  */
-export const queueCallFunc = async (paramList:TypeQueueCallParam[], fn?:TypeQueueCallFunction, option?: TypeQueueCallConfig): Promise<any> => {
+export const queueCallFunc = async <T={}>(paramList: TypeQueueCallParam[]|T[], fn?:TypeQueueCallFunction, option?: TypeQueueCallConfig): Promise<any> => {
     return new Promise((resolve, reject) => {
         const doActionData = {};
         const Result = {};
@@ -177,8 +177,8 @@ export const queueCallFunc = async (paramList:TypeQueueCallParam[], fn?:TypeQueu
         };
         if(utils.isArray(paramList) && paramList.length>0) {
             typeof option?.onBefore === "function" && option?.onBefore(paramList);
-            paramList.map((xParam:TypeQueueCallParam, index:number) => {
-                let lastKey = index > 0 && paramList[index - 1] ? paramList[index - 1].id : undefined;
+            (paramList as TypeQueueCallParam[]).map((xParam:TypeQueueCallParam, index:number) => {
+                let lastKey = index > 0 && paramList[index - 1] ? (paramList[index - 1] as TypeQueueCallParam).id : undefined;
                 const tParam = typeof option?.paramConvert === "function" ? option.paramConvert(xParam, index) || xParam : xParam;
                 keyArr.push(tParam.id);
                 newParamsList.push(tParam);
