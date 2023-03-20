@@ -41,7 +41,9 @@ const defineFactoryService = (Target: new(...args: any[]) => any, type: EnumFact
         Reflect.defineMetadata(CONST_DECORATOR_FOR_MODULE_CLASSID, uid, Target);
         classPool.push(Target);
     } else {
-        throw new Error(`多个定义模块类型装饰器不能同时使用.(${typeName})`);
+        if(checkType !== type) {
+            throw new Error(`多个定义模块类型装饰器不能同时使用.(${typeName})`);
+        }
     }
 };
 const invokeInit = (Target: new(...args:any[]) => any, obj: any) => {
@@ -112,7 +114,8 @@ export const createInstance = <T={}>(Factory: new(...args:any[]) => T, instanceI
     /** Before init params should bind instance id, make sure the inject module can got the id */
     Reflect.defineMetadata(CONST_DECORATOR_FOR_MODULE_INSTANCEID, instanceAppId, Factory);
     const paramsInstance: any[] = paramTypes.map((Fn: new(...args:any) => any) => {
-        if(classPool.indexOf(Fn) < 0) {
+        const classType = Reflect.getMetadata(CONST_DECORATOR_FOR_MODULE_TYPE, Fn);
+        if(utils.isEmpty(classType)) {
             throw new Error(`${Fn.name}没有注册`);
         } else {
             const classType: EnumFactoryModuleType = Reflect.getMetadata(CONST_DECORATOR_FOR_MODULE_TYPE, Fn);

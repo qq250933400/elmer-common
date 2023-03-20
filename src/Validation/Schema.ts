@@ -16,7 +16,11 @@ export type ISchemaProperties<T={}, FormatCallback={}> = {
         properties: ISchemaProperties<T[P], FormatCallback>
     }
 };
-
+export interface ISchemaConfig<T={}, FormatCallback={}, DataType={}> {
+    properties: ISchemaProperties<T,FormatCallback>;
+    formatCallbacks?: FormatCallback;
+    dataType?: ISchemaProperties<DataType,FormatCallback>;
+}
 interface ISchemaValidate {
     (data: any): boolean;
     // tslint:disable-next-line: unified-signatures
@@ -35,6 +39,7 @@ abstract class ASchema {
 export class Schema extends ASchema {
     public message: string = "";
     private schemaConfig: any = {};
+    private formatCallbacks: any = {};
     validate:ISchemaValidate = (data: any, schema?: any, name?: string): boolean => {
         const outscopeTypes = [];
         let pass = false;
@@ -49,13 +54,13 @@ export class Schema extends ASchema {
                     });
                 }
                 // 校验数据
-                this.doValidate(data, schema, name || "Unknow", []);
+                this.doValidate(data, schema, data, name || "Unknow", []);
             } else if(utils.isString(schema)) {
                 // 验证指定规则name
-                this.doValidate(data, this.schemaConfig[schema], schema, []);
+                this.doValidate(data, this.schemaConfig[schema], data, schema, []);
             } else {
                 const vname:string = Object.keys(this.schemaConfig)[0];
-                this.doValidate(data, this.schemaConfig[vname], vname, []);
+                this.doValidate(data, this.schemaConfig[vname], data, vname, []);
             }
             pass = true;
         } catch(e) {
@@ -72,6 +77,7 @@ export class Schema extends ASchema {
             return pass;
         }
     }
+
     addSchema(name: string, schema: any): void {
         if(schema) {
             this.schemaConfig[name] = schema;
@@ -82,7 +88,7 @@ export class Schema extends ASchema {
             delete this.schemaConfig[name];
         }
     }
-    private doValidate(data: any, schema: any, name?: string, prefixKey?: string[]): boolean {
+    private doValidate(data: any, schema: any, sourceData: any, name?: string, prefixKey?: string[]): boolean {
         const properties = schema?.properties;
         if(properties) {
             for(const attrKey of Object.keys(properties)) {
@@ -92,8 +98,17 @@ export class Schema extends ASchema {
                 const keyPathArray = [...prefixKey, attrKey];
                 const keyPath = [...prefixKey, attrKey].join(".");
                 let importRules = false;
+                let checkValue = data[attrKey];
+                if(!utils.isEmpty(config.defaultValue) && (null === checkValue || undefined === checkValue)) {
+                    checkValue = config.defaultValue;
+                }
+                if(!utils.isEmpty(config.format)) {
+                    if(typeof this.formatCallbacks[config.format] === "function") {
+                        checkValue = this.formatCallbacks[config.format](checkValue, sourceData);
+                    }
+                }
                 if(isRequired && data && (undefined === data[attrKey] || null === data[attrKey])) {
-                    data[attrKey] = config.default;
+                    // data[attrKey] = config.default;
                     throw new Error(`配置${name}数据属性${keyPath}是isRequired字段参数不能为空。`);
                 }
                 if(data) {
@@ -101,14 +116,15 @@ export class Schema extends ASchema {
                         const schemaName = type.replace(/^#/, "");
                         if(this.schemaConfig[schemaName]) {
                             importRules = true;
-                            this.doValidate(data[attrKey], this.schemaConfig[schemaName], schemaName, keyPathArray);
+                            this.doValidate(data[attrKey], this.schemaConfig[schemaName], sourceData, schemaName, keyPathArray);
                         } else {
                             throw new Error(`配置${name}参数属性${keyPath}引用规则(${schemaName})不存在`);
                         }
                     } else {
                         if(/Array\<[#a-zA-Z0-9]{1,}\>/.test(type)) {
-                            this.checkArrayTypes(data[attrKey], type, keyPath, name, keyPathArray);
+                            this.checkArrayTypes(data[attrKey], type, keyPath, name, keyPathArray, sourceData);
                         } else {
+                            
                             if(!this.checkType(data[attrKey], type, keyPath, name)) {
                                 const typeDesc = utils.isRegExp(type) ? type.source : JSON.stringify(type);
                                 throw new Error(`配置${name}数据属性${keyPath}数据类型不正确，定义类型：${typeDesc}, 配置数据：${JSON.stringify(data[attrKey])}`);
@@ -129,13 +145,13 @@ export class Schema extends ASchema {
                             }
                         }
                     }
-                    !importRules && this.doValidate(data[attrKey], config, name, keyPathArray);
+                    !importRules && this.doValidate(data[attrKey], config, sourceData, name, keyPathArray);
                 }
             }
         }
         return true;
     }
-    private checkArrayTypes(data: any, type: string, keyPath: string, name: string, prefixArray: string[]):any {
+    private checkArrayTypes(data: any, type: string, keyPath: string, name: string, prefixArray: string[], sourceData: any):any {
         const typeRegExp = /^Array\<([#0-9a-zA-Z]{1,})\>$/;
         const dataMatch = type.match(typeRegExp);
         const declareTypes = this.schemaConfig[name]?.declareTypes || {};
@@ -154,7 +170,7 @@ export class Schema extends ASchema {
                     let index = 0;
                     if(useTypeSchema) {
                         for(const dataItem of data) {
-                            this.doValidate(dataItem, useTypeSchema, name, [...prefixArray, index.toString()]);
+                            this.doValidate(dataItem, useTypeSchema, sourceData, name, [...prefixArray, index.toString()]);
                             index+=1;
                         }
                     } else {
