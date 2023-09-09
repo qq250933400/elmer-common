@@ -35,7 +35,7 @@ export class Observe<EventHandler={}> {
      * 解除事件绑定， 如果eventName为空时默认删除所有事件
      * @param eventName - 要删除的事件名称
      */
-    unBind<EventName extends keyof EventHandler>(eventName: EventName):void {
+    unBind<EventName extends keyof EventHandler>(eventName?: EventName):void {
         if(!utils.isEmpty(eventName)) {
             delete this.listener[eventName];
         } else {
