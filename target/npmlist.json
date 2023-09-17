@@ -1,0 +1,1 @@
+{"version":"3.2.4","name":"elmer-common","dependencies":{"@types/core-js":{"version":"2.5.2"},"ajv":{"version":"5.0.0"},"chalk":{"version":"2.4.2"},"core-js":{"version":"2.6.12"},"zone.js":{"version":"0.8.29"}}}

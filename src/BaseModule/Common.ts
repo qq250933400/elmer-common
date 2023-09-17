@@ -33,6 +33,9 @@ export class Common {
     isEmpty(val:any):boolean {
         return val === undefined || val === null || (this.isString(val) && val.length <= 0);
     }
+    isPromise(val: any): val is Promise<any> {
+        return this.getType(val) === "[object Promise]";
+    }
     // tslint:disable-next-line:no-shadowed-variable
     isEqual(a:any,b:any): boolean {
         if(a===b) {
@@ -268,5 +271,22 @@ export class Common {
     }
     getQuery(key:string):string|undefined|null {
         return utils.getQuery(key);
+    }
+    invoke<T={}>(fn?: Function, ...args: any[]): Promise<T>{
+        return new Promise((resolve, reject) => {
+            if(!fn || typeof fn !== "function") {
+                reject({
+                    statusCode: 500,
+                    message: "the fn should be a function."
+                });
+            } else {
+                const fnResult = fn(...args);
+                if(this.isPromise(fnResult)) {
+                    fnResult.then(resolve).catch(reject);
+                } else {
+                    resolve(fnResult);
+                }
+            }
+        });
     }
 }
